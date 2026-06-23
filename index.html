@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Air Canvas — art mode</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Icons&family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Inter',sans-serif}
+  .title{font-family:'Cinzel',serif}
+  .no-scrollbar::-webkit-scrollbar{display:none}
+  .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden flex flex-col relative select-none">
+
+<header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center z-20">
+    <div class="flex items-center gap-3">
+        <span class="material-icons text-cyan-400 text-3xl">brush</span>
+        <div>
+            <h1 class="title text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500">Neon Air Canvas</h1>
+            <p class="text-xs text-slate-400">Draw in the air · lines never fade · export HQ PNG</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-4">
+        <div id="tracking-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold">
+            <span id="tracking-dot" class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            <span id="tracking-text">Webcam Offline (Mouse mode)</span>
+        </div>
+        <div class="text-xs font-mono text-slate-400">FPS <span id="fps" class="text-emerald-400 font-bold">0</span></div>
+    </div>
+</header>
+
+<main class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+    <section class="w-full md:w-72 bg-slate-900/65 backdrop-blur border-r border-slate-800 flex flex-col z-10 p-4 gap-4 overflow-y-auto no-scrollbar">
+        <div class="relative w-full aspect-square bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+            <video id="webcam-feed" class="w-full h-full object-cover transform -scale-x-100" playsinline autoplay muted></video>
+            <div class="absolute bottom-2 left-2 right-2 flex justify-between items-center">
+                <span class="text-[10px] bg-slate-900/80 px-2 py-0.5 rounded border border-slate-700 text-cyan-400">Webcam</span>
+                <button id="start-camera-btn" class="text-xs bg-cyan-600 hover:bg-cyan-500 px-2.5 py-1 rounded font-semibold text-white flex items-center gap-1">
+                    <span class="material-icons text-xs">videocam</span> Activate Cam
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-3 text-xs">
+            <div>
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Brush Color</div>
+                <div id="swatches" class="flex gap-2"></div>
+            </div>
+            <label class="flex flex-col gap-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Brush Size <span id="size-val" class="text-slate-300 font-mono">14</span></span>
+                <input type="range" id="size-slider" min="2" max="50" value="14" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Glow <span id="glow-val" class="text-slate-300 font-mono">18</span></span>
+                <input type="range" id="glow-slider" min="0" max="50" value="18" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Smoothing <span id="smooth-val" class="text-slate-300 font-mono">60</span></span>
+                <input type="range" id="smooth-slider" min="0" max="100" value="60" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </label>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-2">
+            <h3 class="text-xs font-semibold text-emerald-400 uppercase tracking-widest title">How to draw</h3>
+            <ul class="text-[11px] text-slate-400 leading-relaxed list-disc pl-4 space-y-1">
+                <li>The <b class="text-cyan-300">cyan dot</b> follows your index fingertip.</li>
+                <li>Hold up <b class="text-pink-300">2 fingers</b> (index + middle ✌️) to lay down ink.</li>
+                <li>Fold your fingers to lift the pen and reposition — ink stays forever.</li>
+                <li>No camera? Just drag with the mouse.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="flex-1 relative bg-slate-950 flex flex-col justify-between p-4">
+        <div class="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none">
+            <div class="bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800 shadow-xl flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span class="text-xs text-slate-300 font-medium" id="status-message">Show ✌️ two fingers (or drag the mouse) to paint.</span>
+            </div>
+            <div class="text-xs font-mono px-2 py-1 rounded bg-slate-800" id="pen-state">✋ PEN UP</div>
+        </div>
+
+        <div class="flex-1 w-full rounded-2xl border border-slate-800/80 relative overflow-hidden flex items-center justify-center">
+            <canvas id="art-canvas" class="absolute inset-0 w-full h-full cursor-crosshair z-10"></canvas>
+        </div>
+
+        <div class="w-full mt-4 flex flex-wrap justify-between items-center bg-slate-900/60 border border-slate-800 p-3 rounded-xl gap-3">
+            <div class="flex items-center gap-3 text-xs">
+                <button id="undo-btn" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 font-semibold text-slate-300 flex items-center gap-1">
+                    <span class="material-icons text-sm">undo</span> Undo
+                </button>
+                <button id="clear-btn" class="px-3 py-1.5 rounded-lg border border-rose-800 bg-rose-900/30 hover:bg-rose-900/50 font-semibold text-rose-300 flex items-center gap-1">
+                    <span class="material-icons text-sm">delete</span> Clear
+                </button>
+                <label class="flex items-center gap-1.5 text-slate-400 cursor-pointer ml-2">
+                    <input type="checkbox" id="transparent-chk" class="accent-cyan-500"> Transparent PNG
+                </label>
+            </div>
+            <button id="save-btn" class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 font-bold text-white text-sm flex items-center gap-2 shadow-lg">
+                <span class="material-icons text-base">download</span> Save HQ PNG
+            </button>
+        </div>
+    </section>
+</main>
+
+<script type="module">
+import { HandLandmarker, FilesetResolver }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.20/vision_bundle.mjs";
+
+/* ---------- palette ---------- */
+const COLORS={
+    cyan:{core:'#ffffff',glow:'#06b6d4'}, magenta:{core:'#ffffff',glow:'#ec4899'},
+    gold:{core:'#ffffff',glow:'#eab308'}, lime:{core:'#ffffff',glow:'#84cc16'},
+    violet:{core:'#ffffff',glow:'#8b5cf6'}, orange:{core:'#ffffff',glow:'#f97316'},
+    white:{core:'#ffffff',glow:'#e2e8f0'}
+};
+let element='cyan', brushSize=14, glowSize=18;
+const swWrap=document.getElementById('swatches');
+Object.keys(COLORS).forEach(k=>{
+    const b=document.createElement('button');
+    b.className='w-6 h-6 rounded-full border-2 transition-all';
+    b.style.background=COLORS[k].glow; b.style.borderColor=k===element?'#fff':'transparent';
+    b.style.boxShadow=`0 0 8px ${COLORS[k].glow}`;
+    b.onclick=()=>{ element=k; [...swWrap.children].forEach((c,i)=>c.style.borderColor=Object.keys(COLORS)[i]===k?'#fff':'transparent'); };
+    swWrap.appendChild(b);
+});
+document.getElementById('size-slider').oninput=e=>{ brushSize=+e.target.value; document.getElementById('size-val').textContent=brushSize; };
+document.getElementById('glow-slider').oninput=e=>{ glowSize=+e.target.value; document.getElementById('glow-val').textContent=glowSize; };
+
+/* ---------- One-Euro smoothing ---------- */
+class OneEuro{ constructor(mc=1.2,beta=0.015,dc=1.0){this.mc=mc;this.beta=beta;this.dc=dc;this.x=null;this.dx=0;this.t=null;}
+    a(c,dt){const tau=1/(2*Math.PI*c);return 1/(1+tau/dt);}
+    f(x,t){ if(this.x===null){this.x=x;this.t=t;return x;}
+        const dt=Math.max(1e-3,(t-this.t)/1000),dx=(x-this.x)/dt,aD=this.a(this.dc,dt);
+        const dxh=aD*dx+(1-aD)*this.dx,cut=this.mc+this.beta*Math.abs(dxh),a=this.a(cut,dt);
+        const xh=a*x+(1-a)*this.x;this.x=xh;this.dx=dxh;this.t=t;return xh;} }
+let fx=new OneEuro(), fy=new OneEuro();
+document.getElementById('smooth-slider').oninput=e=>{ document.getElementById('smooth-val').textContent=e.target.value; const mc=2.5-(e.target.value/100)*2.2; fx.mc=mc; fy.mc=mc; };
+
+/* ---------- canvas + persistent art ---------- */
+const canvas=document.getElementById('art-canvas'), dctx=canvas.getContext('2d');
+const art=document.createElement('canvas'), actx=art.getContext('2d');   // baked persistent layer
+let strokes=[];     // vector strokes: {pts:[{x,y}], color, size, glow}
+let cur=null, penDown=false, lastDrawX=0, lastDrawY=0;
+let cursor=null, cursorTarget=null, lastPoseTime=0; const grace=260;
+let W=0,H=0;
+
+function pathStroke(c,pts,scale){ c.beginPath(); c.moveTo(pts[0].x*scale,pts[0].y*scale); for(let i=1;i<pts.length;i++) c.lineTo(pts[i].x*scale,pts[i].y*scale); }
+function renderStroke(c,s,scale){
+    if(!s||s.pts.length<2) return;
+    const col=COLORS[s.color]||COLORS.cyan;
+    c.save(); c.lineCap='round'; c.lineJoin='round'; c.globalCompositeOperation='lighter';
+    c.strokeStyle=col.glow; c.lineWidth=Math.max(1,s.size*scale); c.shadowColor=col.glow; c.shadowBlur=s.glow*scale; c.globalAlpha=0.7; pathStroke(c,s.pts,scale); c.stroke();
+    c.shadowBlur=0; c.strokeStyle=col.core; c.lineWidth=Math.max(1,s.size*0.3*scale); c.globalAlpha=1; pathStroke(c,s.pts,scale); c.stroke();
+    c.restore();
+}
+function rebake(){ actx.clearRect(0,0,art.width,art.height); for(const s of strokes) renderStroke(actx,s,1); }
+function resize(){
+    W=canvas.parentElement.clientWidth; H=canvas.parentElement.clientHeight;
+    canvas.width=W; canvas.height=H; art.width=W; art.height=H; rebake();
+}
+window.addEventListener('resize', resize); resize();
+
+/* ---------- pen ---------- */
+function penStart(){ cur={pts:[], color:element, size:brushSize, glow:glowSize}; }
+function penAdd(x,y){
+    if(!cur) penStart();
+    const last=cur.pts.length?cur.pts[cur.pts.length-1]:{x,y};
+    const d=Math.hypot(x-last.x,y-last.y), step=6;
+    if(d>step){ const n=Math.min(64,Math.ceil(d/step)); for(let i=1;i<=n;i++){ const t=i/n; cur.pts.push({x:last.x+(x-last.x)*t,y:last.y+(y-last.y)*t}); } }
+    else cur.pts.push({x,y});
+    lastDrawX=x; lastDrawY=y;
+}
+function penEnd(){ if(cur && cur.pts.length>1){ strokes.push(cur); renderStroke(actx,cur,1); } cur=null; }
+
+document.getElementById('undo-btn').onclick=()=>{ strokes.pop(); rebake(); };
+document.getElementById('clear-btn').onclick=()=>{ strokes=[]; cur=null; rebake(); };
+
+/* ---------- HIGH-QUALITY SAVE (re-render vectors at 3x / min 2048px) ---------- */
+document.getElementById('save-btn').onclick=()=>{
+    const transparent=document.getElementById('transparent-chk').checked;
+    const scale=Math.max(3, Math.ceil(2048/Math.max(1,W)));
+    const ex=document.createElement('canvas'); ex.width=W*scale; ex.height=H*scale;
+    const ec=ex.getContext('2d');
+    if(!transparent){ const g=ec.createLinearGradient(0,0,0,ex.height); g.addColorStop(0,'#070b12'); g.addColorStop(1,'#0a0e16'); ec.fillStyle=g; ec.fillRect(0,0,ex.width,ex.height); }
+    for(const s of strokes) renderStroke(ec,s,scale);
+    if(cur) renderStroke(ec,cur,scale);
+    ex.toBlob(b=>{
+        const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+        a.download='neon-art-'+Date.now()+'.png'; a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+        const st=document.getElementById('status-message'); const old=st.textContent;
+        st.innerHTML=`<b class='text-emerald-400'>Saved ${ex.width}×${ex.height} PNG ✓</b>`; setTimeout(()=>st.textContent=old,2500);
+    },'image/png');
+};
+
+/* ---------- render loop ---------- */
+function frame(){
+    dctx.globalCompositeOperation='source-over';
+    const g=dctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#070b12'); g.addColorStop(1,'#0a0e16'); dctx.fillStyle=g; dctx.fillRect(0,0,W,H);
+    dctx.drawImage(art,0,0);
+    if(cur) renderStroke(dctx,cur,1);
+    if(cursorTarget){
+        if(!cursor) cursor={...cursorTarget};
+        cursor.x+=(cursorTarget.x-cursor.x)*0.5; cursor.y+=(cursorTarget.y-cursor.y)*0.5;
+        cursor.down=cursorTarget.down; cursor.vis=cursorTarget.vis;
+    }
+    if(cursor && cursor.vis){
+        const c=COLORS[element]||COLORS.cyan;
+        dctx.beginPath(); dctx.arc(cursor.x,cursor.y, cursor.down?Math.max(8,brushSize*0.6):9, 0, 7);
+        dctx.fillStyle=cursor.down?'#ec4899':c.glow; dctx.shadowColor=dctx.fillStyle; dctx.shadowBlur=20; dctx.fill();
+        dctx.shadowBlur=0; dctx.beginPath(); dctx.arc(cursor.x,cursor.y,3,0,7); dctx.fillStyle='#fff'; dctx.fill();
+    }
+    requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- mouse / touch ---------- */
+function setCursor(x,y,down,vis){ cursorTarget={x,y,down,vis}; }
+function localXY(e){ const r=canvas.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+function down(e){ penDown=true; penStart(); const p=localXY(e); lastDrawX=p.x; lastDrawY=p.y; setCursor(p.x,p.y,true,true); penAdd(p.x,p.y); document.getElementById('pen-state').textContent='✏️ DRAWING'; if(e.touches)e.preventDefault(); }
+function move(e){ const p=localXY(e); setCursor(p.x,p.y,penDown,true); if(penDown) penAdd(p.x,p.y); if(e.touches)e.preventDefault(); }
+function up(){ if(penDown){ penDown=false; penEnd(); document.getElementById('pen-state').textContent='✋ PEN UP'; } }
+canvas.addEventListener('mousedown',down); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+canvas.addEventListener('touchstart',down); canvas.addEventListener('touchmove',move); window.addEventListener('touchend',up);
+
+/* ---------- GPU hand tracking (two-finger draw, low-FPS safe) ---------- */
+let landmarker=null, running=false, lastT=-1, frames=0, fpsT=performance.now();
+const video=document.getElementById('webcam-feed');
+const trackingBadge=document.getElementById('tracking-badge'), trackingDot=document.getElementById('tracking-dot'), trackingText=document.getElementById('tracking-text');
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y,(a.z-b.z)||0); }
+
+async function initModel(){
+    const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.20/wasm");
+    landmarker=await HandLandmarker.createFromOptions(fs,{
+        baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate:"GPU" },
+        runningMode:"VIDEO", numHands:1 });
+}
+async function startCamera(){
+    if(running) return;
+    try{
+        trackingText.textContent="Loading model…";
+        if(!landmarker) await initModel();
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}}});
+        video.srcObject=s;
+        await new Promise(r=>{ if(video.readyState>=1) r(); else video.onloadedmetadata=()=>r(); });
+        try{ await video.play(); }catch(_){}
+        running=true;
+        trackingBadge.className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold";
+        trackingDot.className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        track();
+    }catch(e){ trackingText.textContent="Camera refused (mouse only)"; }
+}
+document.getElementById('start-camera-btn').onclick=startCamera;
+
+function processHand(res, now){
+    const hands=res.landmarks||[];
+    if(!hands.length){
+        if(penDown && now-lastPoseTime>grace){ penDown=false; penEnd(); document.getElementById('pen-state').textContent='✋ PEN UP'; }
+        if(cursorTarget) cursorTarget.vis=false;
+        trackingText.textContent="Show 2 fingers ✌️ to paint";
+        return;
+    }
+    const lm=hands[0], tip=lm[8];
+    const x=fx.f((1-tip.x)*W, now), y=fy.f(tip.y*H, now);
+    const ext=(t,p)=>dist(lm[0],lm[t])>dist(lm[0],lm[p]);
+    const iUp=ext(8,6), mUp=ext(12,10), rUp=ext(16,14), pUp=ext(20,18);
+    const twoFinger = iUp && mUp && !rUp && !pUp;
+    if(twoFinger) lastPoseTime=now;
+    const want = twoFinger || (penDown && now-lastPoseTime<grace);
+    trackingText.textContent = want ? "✌️ Painting" : "Show 2 fingers ✌️ to paint";
+    setCursor(x,y,want,true);
+    if(want && !penDown){ penDown=true; penStart(); lastDrawX=x; lastDrawY=y; document.getElementById('pen-state').textContent='✏️ DRAWING'; }
+    if(want && penDown) penAdd(x,y);
+    if(!want && penDown){ penDown=false; penEnd(); document.getElementById('pen-state').textContent='✋ PEN UP'; }
+}
+function track(){
+    if(!running) return;
+    const now=performance.now();
+    if(video.readyState>=2 && video.videoWidth>0 && video.currentTime!==lastT){
+        lastT=video.currentTime;
+        try{ processHand(landmarker.detectForVideo(video, now), now); }catch(e){}
+    }
+    frames++; if(now-fpsT>=500){ document.getElementById('fps').textContent=Math.round(frames*1000/(now-fpsT)); frames=0; fpsT=now; }
+    requestAnimationFrame(track);
+}
+</script>
+</body>
+</html>
