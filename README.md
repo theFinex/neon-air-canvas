@@ -1,5 +1,7 @@
 # Neon Air Canvas 🎨 — paint in the air with your hand
 
+![Neon Air Canvas preview](preview.png)
+
 Air-paint glowing neon artwork with your fingertip — **lines never fade** until you clear them, and
 you can **export a high-quality PNG** (vectors re-rendered at 3× / ≥2048px, optional transparent
 background). 100% in-browser, GPU hand-tracking via MediaPipe.
